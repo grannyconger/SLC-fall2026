@@ -79,8 +79,9 @@ const entries=[
 const timeFormat=new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',hour:'numeric',minute:'2-digit'});
 const dayFormat=new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',weekday:'long',month:'long',day:'numeric'});
 function getState(now){
- const current=entries.find(e=>now>=e.start&&now<e.end);
- const next=entries.find(e=>e.start>now);
+ const earlyDisplayNames=new Set(['Austin Vest','Holmes Wilson']);
+ const current=entries.find(e=>now>=e.start-(earlyDisplayNames.has(e.name)?10*MINUTE:0)&&now<e.end);
+ const next=entries.find(e=>e.start>now&&e!==current);
  if(current)return{kind:'meeting',current,next};
  const previous=entries.filter(e=>e.end<=now).at(-1);
  // A gap between arrivals longer than one slot becomes a break after the first 15 minutes.
@@ -100,11 +101,11 @@ function update(){
  $('clock').innerHTML=clockParts.filter(p=>p.type!=='dayPeriod').map(p=>p.value).join('').trim()+`<small>${clockParts.find(p=>p.type==='dayPeriod').value}</small>`;
  $('date').textContent=dayFormat.format(now);
  $('eduscape-agenda').textContent=current?`Pay for Eduscape ($${eduscapeDue[current.name]})`:'Pay for Eduscape';
- $('status').textContent={meeting:'Now meeting',break:'',waiting:'Welcome',done:'All wrapped up'}[state.kind];
+ $('status').textContent=current&&now<current.start?'Up soon':{meeting:'Now meeting',break:'',waiting:'Welcome',done:'All wrapped up'}[state.kind];
  $('student').textContent=current?current.name:state.kind==='break'?'Snack Break':state.kind==='waiting'?'Conferences begin soon':'Conferences complete';
  $('guardians').textContent=current?current.guardians:'';
  $('slot').textContent=current?`${timeFormat.format(current.start)} – ${timeFormat.format(current.end)}`:state.kind==='break'?`${timeFormat.format(previous.end)} – ${timeFormat.format(next.start)}`:'';
- $('remaining').textContent=current?`${Math.ceil((current.end-now)/MINUTE)} min remaining`:state.kind==='break'?`${Math.ceil((next.start-now)/MINUTE)} min until next conference`:'';
+ $('remaining').textContent=current?(now<current.start?`Starts in ${Math.ceil((current.start-now)/MINUTE)} min`:`${Math.ceil((current.end-now)/MINUTE)} min remaining`):state.kind==='break'?`${Math.ceil((next.start-now)/MINUTE)} min until next conference`:'';
  $('next-name').textContent=next?next.name:'See you next time';
  $('next-guardians').textContent=next?next.guardians:'';
  $('next-time').textContent=next?timeFormat.format(next.start):'—';
